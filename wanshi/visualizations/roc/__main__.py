@@ -100,7 +100,7 @@ def read_table(file) -> pd.DataFrame:
         return pd.read_csv(file)
 
 
-if __name__ == "__main__":
+def main():
     parser = ArgumentParser(description="Create a ROC Curve.")
     add_roc_curve_args(parser)
     parser.add_argument(
@@ -119,6 +119,7 @@ if __name__ == "__main__":
         pd.read_csv(p, dtype={f"{args.target_label}": str, "pred": str})
         for p in args.pred_csvs
     ]
+
     y_trues = [df[args.target_label] == args.true_class for df in preds_dfs]
     y_preds = [
         pd.to_numeric(df[f"{args.target_label}_{args.true_class}"]) for df in preds_dfs
@@ -177,3 +178,6 @@ if __name__ == "__main__":
     fig.tight_layout()
     fig.savefig(args.outpath)
     plt.close(fig)
+
+if __name__ == "__main__":
+    main()
