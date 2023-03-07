@@ -3,6 +3,7 @@
 
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import scipy.stats as st
@@ -30,7 +31,9 @@ score_labels = [
 ]
 
 
-def categorical(preds_df: pd.DataFrame, target_label: str) -> pd.DataFrame:
+def categorical(
+    preds_df: pd.DataFrame, target_label: str, threshold: Optional[float] = None
+) -> pd.DataFrame:
     """Calculates some stats for categorical prediction tables.
 
     This will calculate the number of items, the AUROC, AUPRC and p value
@@ -41,6 +44,9 @@ def categorical(preds_df: pd.DataFrame, target_label: str) -> pd.DataFrame:
     y_pred = (
         preds_df[[f"{target_label}_{cat}" for cat in categories]].applymap(float).values
     )
+
+    if threshold is None:
+        threshold = 1 / len(categories)
 
     stats_df = pd.DataFrame(index=categories)
 
@@ -63,13 +69,13 @@ def categorical(preds_df: pd.DataFrame, target_label: str) -> pd.DataFrame:
 
     # precision
     stats_df["precision_score"] = [
-        metrics.precision_score(y_true == cat, y_pred[:, i] > 0.5)
+        metrics.precision_score(y_true == cat, y_pred[:, i] > threshold)
         for i, cat in enumerate(categories)
     ]
 
     # recall
     stats_df["recall_score"] = [
-        metrics.recall_score(y_true == cat, y_pred[:, i] > 0.5)
+        metrics.recall_score(y_true == cat, y_pred[:, i] > threshold)
         for i, cat in enumerate(categories)
     ]
 
@@ -107,22 +113,26 @@ def aggregate_categorical_stats(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def bootstrapped_categorical(
-    preds_df: pd.DataFrame, *, target_label: str, n_samples: int = 10000
+    preds_df: pd.DataFrame,
+    *,
+    target_label: str,
+    n_samples: int = 10000,
+    threshold: Optional[float] = None,
 ) -> pd.DataFrame:
     """Calculates categorical stats confidence intervals by bootstrapping."""
     # sample repeatedly and calculate statistics for each iteration
     sample_stats = []
     for _ in trange(n_samples, desc="Bootstrapping stats", leave=False):
         sample_df = preds_df.sample(frac=1, replace=True)
-        sample_stats.append(categorical(sample_df, target_label))
+        sample_stats.append(categorical(sample_df, target_label, threshold=threshold))
 
     # calculate mean stats & 95% confidence intervals
     grouped = (
         pd.concat(sample_stats).reset_index(names=["category"]).groupby("category")
     )
     means = grouped.mean()
-    lower = grouped.quantile(".025")
-    upper = grouped.quantile(".975")
+    lower = grouped.quantile(.025)
+    upper = grouped.quantile(.975)
     confs = (upper - lower) / 2
 
     # We aggregate the stats in such a roundabout way to have the items in the
