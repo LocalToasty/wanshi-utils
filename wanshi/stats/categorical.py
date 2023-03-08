@@ -68,13 +68,13 @@ def categorical(
     ]
 
     # precision
-    stats_df["precision_score"] = [
+    stats_df[f"precision_score @ {threshold}"] = [
         metrics.precision_score(y_true == cat, y_pred[:, i] > threshold)
         for i, cat in enumerate(categories)
     ]
 
     # recall
-    stats_df["recall_score"] = [
+    stats_df[f"recall_score @ {threshold}"] = [
         metrics.recall_score(y_true == cat, y_pred[:, i] > threshold)
         for i, cat in enumerate(categories)
     ]
