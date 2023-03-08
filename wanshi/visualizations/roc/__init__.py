@@ -22,7 +22,7 @@ all = [
 def plot_single_decorated_roc_curve(
     ax: plt.Axes,
     y_true: npt.NDArray[np.bool_],
-    y_pred: npt.NDArray[np.float_],
+    y_score: npt.NDArray[np.float_],
     *,
     title: Optional[str] = None,
     n_bootstrap_samples: Optional[int] = None,
@@ -33,13 +33,13 @@ def plot_single_decorated_roc_curve(
     Args:
         ax:  Axis to plot to.
         y_true:  A sequence of ground truths.
-        y_pred:  A sequence of predictions.
+        y_score:  A sequence of predictions.
         title:  Title of the plot.
     """
     plot_bootstrapped_roc_curve(
         ax,
         y_true,
-        y_pred,
+        y_score,
         label="AUC = {ci}",
         n_bootstrap_samples=n_bootstrap_samples,
         threshold_cmap=threshold_cmap,
@@ -115,15 +115,15 @@ def split_preds_into_groups(
     true_label: str,
     subgroup_label: str,
 ) -> Mapping[str, Tuple[npt.NDArray[np.bool_], npt.NDArray[np.float_]]]:
-    """Splits predictions into a mapping `subgroup_name -> (y_true, y_pred)."""
+    """Splits predictions into a mapping `subgroup_name -> (y_true, y_score)."""
     groups = {}
     for subgroup, subgroup_patients in clini_df.PATIENT.groupby(
         clini_df[subgroup_label]
     ):
         subgroup_preds = preds_df[preds_df.PATIENT.isin(subgroup_patients)]
         y_true = subgroup_preds[target_label] == true_label
-        y_pred = pd.to_numeric(subgroup_preds[f"{target_label}_{true_label}"])
-        groups[subgroup] = (y_true.values, y_pred.values)
+        y_score = pd.to_numeric(subgroup_preds[f"{target_label}_{true_label}"])
+        groups[subgroup] = (y_true.values, y_score.values)
 
     return groups
 
@@ -140,7 +140,7 @@ def plot_decorated_rocs_for_subtypes(
 ) -> None:
     """Plots a ROC for multiple groups."""
     tpas: List[Tuple[str, TPA]] = []
-    for subgroup, (y_true, y_pred) in groups.items():
+    for subgroup, (y_true, y_score) in groups.items():
         if subgroups and subgroup not in subgroups:
             continue
 
@@ -150,7 +150,7 @@ def plot_decorated_rocs_for_subtypes(
             )
             continue
 
-        tpas.append((subgroup, TPA(y_true, y_pred, roc_auc_score(y_true, y_pred))))
+        tpas.append((subgroup, TPA(y_true, y_score, roc_auc_score(y_true, y_score))))
 
     # sort trues, preds, AUCs by AUC
     tpas = sorted(tpas, key=lambda x: x[1].auc, reverse=True)

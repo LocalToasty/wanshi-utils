@@ -179,5 +179,6 @@ def main():
     fig.savefig(args.outpath)
     plt.close(fig)
 
+
 if __name__ == "__main__":
     main()
